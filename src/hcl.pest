@@ -13,12 +13,11 @@ key = _{ ident | string }
 
 // Identifiers
 ident = @{ ident_first_char ~ ident_char* }
-ident_char = _{ letter | ASCII_DIGIT | "-" | "." }
-ident_first_char = _{ letter | "_" }
-letter = _{ 'a'..'z' | 'A'..'Z' }
+ident_char = _{ ASCII_ALPHA  | ASCII_DIGIT | "_" | "-" | "." }
+ident_first_char = _{ ASCII_ALPHA  | "_" } 
 
 // Values
-value = _{ list | object | string | number | boolean }
+value = _{ list | object | string | number | boolean | heredoc }
 
 // Lists
 list = {
@@ -32,8 +31,20 @@ list = {
 object = { "{" ~ (nested_object | assignment)* ~ "}" }
 
 // Strings
-string = @{ "\"" ~ string_content ~ "\"" }
-string_content = @{ (!"\"" ~ ANY)* }
+string = @{ 
+    quote 
+    ~ (quoted_quote | (!quote ~ ANY))* 
+    ~ quote
+}
+quoted_quote = _{ "\\\"" }
+quote = _{ "\""}
+
+// Heredoc
+heredoc = ${
+    "<<" ~ "-"? ~ WHITESPACE* ~ PUSH(ident) ~ newline
+    ~ (!PEEK ~ ANY)*
+    ~ WHITESPACE* ~ POP
+}
 
 // Numbers
 number = @{

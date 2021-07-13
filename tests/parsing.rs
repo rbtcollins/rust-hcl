@@ -27,7 +27,6 @@ macro_rules! test_fixture {
 }
 
 test_fixture!(test_array_comment, "array_comment", true);
-test_fixture!(test_assign_colon, "assign_colon", true);
 test_fixture!(test_assign_deep, "assign_deep", true);
 test_fixture!(test_basic, "basic", true);
 test_fixture!(test_basic_int_string, "basic_int_string", true);
@@ -52,7 +51,6 @@ test_fixture!(test_list_of_maps, "list_of_maps", true);
 test_fixture!(test_multiline, "multiline", true);
 test_fixture!(test_multiline_bad, "multiline_bad", false);
 test_fixture!(test_multiline_indented, "multiline_indented", true);
-test_fixture!(test_multiline_literal, "multiline_literal", false);
 test_fixture!(
     test_multiline_literal_with_hil,
     "multiline_literal_with_hil",
@@ -69,7 +67,6 @@ test_fixture!(test_multiple, "multiple", true);
 test_fixture!(test_nested_block_comment, "nested_block_comment", true);
 test_fixture!(test_nested_provider_bad, "nested_provider_bad", false);
 test_fixture!(test_object_with_bool, "object_with_bool", true);
-test_fixture!(test_old, "old", true);
 test_fixture!(test_scientific, "scientific", true);
 test_fixture!(test_slice_expand, "slice_expand", true);
 test_fixture!(test_structure, "structure", true);
