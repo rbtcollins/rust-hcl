@@ -3,10 +3,7 @@ use pest::iterators::Pairs;
 use pest::Parser;
 
 /// An error encountered while decoding HCL data.
-#[derive(Debug)]
-pub enum Error {
-    Pest(pest::error::Error<Rule>),
-}
+type Error = pest::error::Error<Rule>;
 
 /// A parser for HCL data.
 #[derive(Debug, Parser)]
@@ -15,7 +12,7 @@ struct HclParser;
 
 /// Parse HCL data contained in a string slice.
 pub fn parse(input: &str) -> Result<Pairs<Rule>, Error> {
-    HclParser::parse(Rule::hcl, input).map_err(|error| Error::Pest(error))
+    HclParser::parse(Rule::hcl, input)
 }
 
 #[cfg(test)]
