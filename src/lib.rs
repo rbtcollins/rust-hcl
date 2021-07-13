@@ -9,6 +9,7 @@ mod ast;
 mod parse;
 
 pub use ast::*;
+pub use parse::parse;
 
 #[cfg(debug_assertions)]
 const _GRAMMAR: &'static str = include_str!("hcl.pest");
