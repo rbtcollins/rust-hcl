@@ -1,11 +1,11 @@
 use pest;
-use pest::Parser;
 use pest::iterators::Pairs;
+use pest::Parser;
 
 /// An error encountered while decoding HCL data.
 #[derive(Debug)]
-pub enum Error<'i> {
-    Pest(pest::Error<'i, Rule>),
+pub enum Error {
+    Pest(pest::error::Error<Rule>),
 }
 
 /// A parser for HCL data.
@@ -29,7 +29,7 @@ mod tests {
             input: "true",
             rule: Rule::boolean,
             tokens: [
-                boolean(0, 4, [true_lit(0, 4)])
+                boolean(0, 4, [])
             ]
         }
     }
@@ -41,60 +41,55 @@ mod tests {
             input: "false",
             rule: Rule::boolean,
             tokens: [
-                boolean(0, 5, [false_lit(0, 5)])
+                boolean(0, 5, [])
             ]
         }
     }
 
     #[test]
-    fn parse_int() {
+    fn parse_number() {
         parses_to! {
             parser: HclParser,
             input: "0",
-            rule: Rule::int,
+            rule: Rule::number,
             tokens: [
-                int(0, 1)
+                number(0, 1)
             ]
         }
     }
 
     #[test]
-    fn parse_negative_int() {
+    fn parse_negative_number() {
         parses_to! {
             parser: HclParser,
             input: "-1",
-            rule: Rule::int,
+            rule: Rule::number,
             tokens: [
-                int(0, 2, [])
+                number(0, 2, [])
             ]
         }
     }
 
     #[test]
-    fn parse_float_zero_point() {
+    fn parse_number_zero_point() {
         parses_to! {
             parser: HclParser,
             input: "0.",
-            rule: Rule::float,
+            rule: Rule::number,
             tokens: [
-                float(0, 2, [int(0, 1)])
+                number(0, 2, [])
             ]
         }
     }
 
     #[test]
-    fn parse_float_one_exp() {
+    fn parse_number_one_exp() {
         parses_to! {
             parser: HclParser,
             input: "1e10",
-            rule: Rule::float,
+            rule: Rule::number,
             tokens: [
-                float(0, 4, [
-                    int(0, 1),
-                    exp(1, 4, [
-                        int(2, 4)
-                    ])
-                ])
+                number(0, 4, [])
             ]
         }
     }
@@ -104,9 +99,9 @@ mod tests {
         parses_to! {
             parser: HclParser,
             input: "# foo",
-            rule: Rule::comment,
+            rule: Rule::COMMENT,
             tokens: [
-                comment(0, 5)
+                COMMENT(0, 5)
             ]
         }
     }
@@ -116,9 +111,9 @@ mod tests {
         parses_to! {
             parser: HclParser,
             input: "// foo",
-            rule: Rule::comment,
+            rule: Rule::COMMENT,
             tokens: [
-                comment(0, 6)
+                COMMENT(0, 6)
             ]
         }
     }
@@ -128,9 +123,9 @@ mod tests {
         parses_to! {
             parser: HclParser,
             input: "/* foo\nbar */",
-            rule: Rule::comment,
+            rule: Rule::COMMENT,
             tokens: [
-                comment(0, 13)
+                COMMENT(0, 13)
             ]
         }
     }
@@ -167,9 +162,7 @@ mod tests {
             rule: Rule::list,
             tokens: [
                 list(0, 6, [
-                    boolean(1, 5, [
-                        true_lit(1, 5)
-                    ])
+                    boolean(1, 5, [])
                 ])
             ]
         }
@@ -183,7 +176,7 @@ mod tests {
             rule: Rule::list,
             tokens: [
                 list(0, 6, [
-                    int(1, 5)
+                    number(1, 5)
                 ])
             ]
         }
@@ -211,9 +204,7 @@ mod tests {
             rule: Rule::list,
             tokens: [
                 list(0, 7, [
-                    boolean(1, 5, [
-                        true_lit(1, 5)
-                    ])
+                    boolean(1, 5, [])
                 ])
             ]
         }
@@ -227,12 +218,8 @@ mod tests {
             rule: Rule::list,
             tokens: [
                 list(0, 11, [
-                    boolean(1, 5, [
-                        true_lit(1, 5)
-                    ]),
-                    boolean(6, 10, [
-                        true_lit(6, 10)
-                    ])
+                    boolean(1, 5, []),
+                    boolean(6, 10, [  ])
                 ])
             ]
         }
@@ -247,10 +234,10 @@ mod tests {
             tokens: [
                 list(0, 12, [
                     boolean(1, 5, [
-                        true_lit(1, 5)
+
                     ]),
                     boolean(7, 11, [
-                        true_lit(7, 11)
+
                     ])
                 ])
             ]
@@ -266,10 +253,10 @@ mod tests {
             tokens: [
                 list(0, 14, [
                     boolean(1, 5, [
-                        true_lit(1, 5)
+
                     ]),
                     boolean(7, 11, [
-                        true_lit(7, 11)
+
                     ])
                 ])
             ]
@@ -285,9 +272,9 @@ mod tests {
             tokens: [
                 list(0, 9, [
                     boolean(1, 5, [
-                       true_lit(1, 5)
+
                     ]),
-                    int(7, 8)
+                    number(7, 8)
                 ])
             ]
         }
@@ -301,14 +288,8 @@ mod tests {
             rule: Rule::assignment,
             tokens: [
                 assignment(0, 10, [
-                    key(0, 3, [
-                        ident(0, 3),
-                    ]),
-                    value(6, 10, [
-                        boolean(6, 10, [
-                            true_lit(6, 10)
-                        ])
-                    ])
+                    ident(0, 3),
+                    boolean(6, 10, [])
                 ])
             ]
         }
@@ -322,9 +303,7 @@ mod tests {
             rule: Rule::nested_object,
             tokens: [
                 nested_object(0, 19, [
-                    keys(0, 3, [
-                        ident(0, 3)
-                    ]),
+                    ident(0, 3),
                     object(4, 19, [
                         assignment(6, 18, [
                             ident(6, 9),
@@ -338,16 +317,20 @@ mod tests {
 
     #[test]
     fn parse_multi_nested_object() {
+        for pair in
+            super::HclParser::parse(Rule::nested_object, "foo \"bar\" { bar = \"baz\" }").unwrap()
+        {
+            println!("xxx{:?}xxx", pair);
+        }
+
         parses_to! {
             parser: HclParser,
             input: "foo \"bar\" { baz = \"qux\" }",
             rule: Rule::nested_object,
             tokens: [
                 nested_object(0, 25, [
-                    keys(0, 9, [
-                        ident(0, 3),
-                        string(4, 9)
-                    ]),
+                    ident(0, 3),
+                    string(4, 9),
                     object(10, 25, [
                         assignment(12, 24, [
                             ident(12, 15),

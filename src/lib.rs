@@ -2,8 +2,10 @@
 
 #![deny(missing_debug_implementations)]
 
-#[cfg_attr(test, macro_use)] extern crate pest;
-#[macro_use] extern crate pest_derive;
+#[cfg_attr(test, macro_use)]
+extern crate pest;
+#[macro_use]
+extern crate pest_derive;
 
 mod ast;
 mod parse;

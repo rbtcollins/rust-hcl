@@ -1,53 +1,57 @@
+// This is not compliant with https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md, but its good enough for many common files.
+
 // The top-level scope of an HCL file
-hcl = { soi ~ (nested_object | assignment )* ~ eoi }
+hcl = { SOI ~ (nested_object | assignment)* ~ EOI }
 
 // Key-value pairs, possibly nested, AKA "object items"
-nested_object = { keys ~ object }
+nested_object = { ident ~ key* ~ object }
 assignment = { key ~ "=" ~ value ~ ","? }
 
 // Object keys
-keys = { key{2,} }
-key = { ident | string }
+keys = { key{1,} }
+key = _{ ident | string }
 
 // Identifiers
 ident = @{ ident_first_char ~ ident_char* }
-ident_char = _{ letter | digit | "-" | "." }
+ident_char = _{ letter | ASCII_DIGIT | "-" | "." }
 ident_first_char = _{ letter | "_" }
 letter = _{ 'a'..'z' | 'A'..'Z' }
 
 // Values
-value = { list | object | string | number | boolean }
+value = _{ list | object | string | number | boolean }
 
 // Lists
-list = { "[" ~ list_item* ~ last_list_item? ~ "]" }
-list_item = _{ value ~ "," }
-last_list_item = _{ value ~ ","? }
+list = {
+    "["
+    ~ (value ~ ",")*
+    ~ value?
+    ~ "]"
+}
 
 // Object literals
 object = { "{" ~ (nested_object | assignment)* ~ "}" }
 
 // Strings
 string = @{ "\"" ~ string_content ~ "\"" }
-string_content = @{ (!"\"" ~ any)* }
+string_content = @{ (!"\"" ~ ANY)* }
 
 // Numbers
-number = { float | int }
-float = ${ "-"? ~ digit+ ~ "." ~ digit? ~ exp? | digit+ ~ exp }
-int = { "-"? ~ digit+ }
-exp = ${ ^"e" ~ ("+" | "-")? ~ digit }
-digit = _{ '0'..'9' }
+number = @{
+    "-"?
+    ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
+    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
+}
 
 // Booleans
-boolean = { true_lit | false_lit }
-true_lit = { "true" }
-false_lit = { "false" }
+boolean = { "true" | "false" }
 
 // Comments
-comment = _{ inline_comment | block_comment }
-inline_comment = _{ ("#" | "//") ~ (!eo_inline_comment ~ any)* }
-block_comment = _{ "/*" ~ (!"*/" ~ any)* ~ "*/" }
-eo_inline_comment = _{ newline | eoi }
+COMMENT = { inline_comment | block_comment }
+inline_comment = { ("#" | "//") ~ (!eo_comment ~ ANY)* ~ eo_comment}
+block_comment = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" ~ eo_comment}
+eo_comment = { newline | EOI }
 
 // Whitespace
-whitespace = _{ " " | "\t" | newline }
+WHITESPACE = _{ " " | "\t" | newline }
 newline = _{ "\r\n" | "\n" }
