@@ -11,7 +11,7 @@ mod ast;
 mod parse;
 
 pub use ast::*;
-pub use parse::parse;
+pub use parse::{parse, Rule};
 
 #[cfg(debug_assertions)]
 const _GRAMMAR: &'static str = include_str!("hcl.pest");
