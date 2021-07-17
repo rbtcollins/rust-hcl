@@ -1,9 +1,7 @@
-extern crate hcl;
-
 use std::fs::File;
 use std::io::Read;
 
-use hcl::parse;
+use hcl::{self, parse_pest};
 
 macro_rules! test_fixture {
     ($id:ident, $name:expr, $is_ok:expr) => {
@@ -14,7 +12,15 @@ macro_rules! test_fixture {
             let mut data = String::new();
             file.read_to_string(&mut data)
                 .expect(&format!("failed to read tests/fixtures/{}.hcl", $name));
-            let result = parse(&data);
+            let result = parse_pest(&data);
+            assert_eq!(
+                result.is_ok(),
+                $is_ok,
+                "failed to parse tests/fixtures/{}.hcl: {:?}",
+                $name,
+                result
+            );
+            let result = hcl::parse(&data);
             assert_eq!(
                 result.is_ok(),
                 $is_ok,
@@ -51,11 +57,6 @@ test_fixture!(test_list_of_maps, "list_of_maps", true);
 test_fixture!(test_multiline, "multiline", true);
 test_fixture!(test_multiline_bad, "multiline_bad", false);
 test_fixture!(test_multiline_indented, "multiline_indented", true);
-test_fixture!(
-    test_multiline_literal_with_hil,
-    "multiline_literal_with_hil",
-    true
-);
 test_fixture!(test_multiline_no_eof, "multiline_no_eof", true);
 test_fixture!(
     test_multiline_no_hanging_indent,
@@ -66,6 +67,7 @@ test_fixture!(test_multiline_no_marker, "multiline_no_marker", false);
 test_fixture!(test_multiple, "multiple", true);
 test_fixture!(test_nested_block_comment, "nested_block_comment", true);
 test_fixture!(test_nested_provider_bad, "nested_provider_bad", false);
+test_fixture!(test_newline_stress, "newline_stress", true);
 test_fixture!(test_object_with_bool, "object_with_bool", true);
 test_fixture!(test_scientific, "scientific", true);
 test_fixture!(test_slice_expand, "slice_expand", true);

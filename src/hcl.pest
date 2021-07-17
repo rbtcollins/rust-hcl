@@ -1,34 +1,172 @@
-// This is not compliant with https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md, but its good enough for many common files.
+// see https://github.com/hashicorp/hcl/blob/main/hclsyntax/spec.md, aiming for full compliance.
 
-// The top-level scope of an HCL file
-hcl = { SOI ~ (nested_object | assignment)* ~ EOI }
-
-// Key-value pairs, possibly nested, AKA "object items"
-nested_object = { ident ~ key* ~ object }
-assignment = { key ~ "=" ~ value ~ ","? }
-
-// Object keys
-keys = { key{1,} }
-key = _{ ident | string }
-
-// Identifiers
-ident = @{ ident_first_char ~ ident_char* }
-ident_char = _{ ASCII_ALPHA  | ASCII_DIGIT | "_" | "-" | "." }
-ident_first_char = _{ ASCII_ALPHA  | "_" } 
-
-// Values
-value = _{ list | object | string | number | boolean | heredoc }
-
-// Lists
-list = {
-    "["
-    ~ (value ~ ",")*
-    ~ value?
-    ~ "]"
+// ConfigFile   = Body;
+config_file = { SOI ~ body ~ EOI }
+// Body         = (Attribute | Block | OneLineBlock)*;
+body = {
+    (newline* ~ body_element ~ newline*)*
+}
+body_element = {
+    attribute | block | one_line_block
+}
+// Attribute    = Identifier "=" Expression Newline;
+// Note the |EOI: another variation from spec.md
+attribute = { ident ~ "=" ~ expr ~ (newline |EOI)  }
+// Block        = Identifier (StringLit|Identifier)* "{" Newline Body "}" Newline;
+block = {
+    ident ~ block_extra_id* ~ "{" ~ newline ~ body ~ "}" ~ (newline |EOI)
+}
+block_extra_id = {string_lit | ident}
+// OneLineBlock = Identifier (StringLit|Identifier)* "{" (Identifier "=" Expression)? "}" Newline;
+one_line_block = {
+    ident
+    ~ block_extra_id*
+    ~ "{"
+    ~ (ident ~ "=" ~ expr)? 
+    ~ "}" ~ (newline |EOI)
 }
 
-// Object literals
-object = { "{" ~ (nested_object | assignment)* ~ "}" }
+// Identifiers
+ident = @{ ident_inner }
+ident_inner = _{ ident_first_char ~ ident_char* }
+ident_char = _{ ASCII_ALPHA  | ASCII_DIGIT | "_" | "-" | (!ellipsis ~ ".") }
+ident_first_char = _{ ASCII_ALPHA  | "_" } 
+
+expr = { expr_term }
+expr_newline = { expr_term_newline }
+
+// Values
+
+expr_term = _{ 
+    (literal_value
+     | collection_value
+     | template_expr 
+     | function_call
+     | variable_expr
+     | for_expr
+     // Between the ( and ) characters denoting a sub-expression,
+     // newline characters are ignored as whitespace
+     | ( "(" ~ newline* ~ expr_newline ~ newline* ~ ")" ))
+     // Adaption to the left recursive grammar from the spec to make it right
+     // recursive
+    ~ index*
+}
+
+expr_term_newline = _{
+    (literal_value  // no nl 
+     | collection_value // embeds nl already
+     | template_expr // no nl / embeds nl already
+     | function_call_newline
+     | variable_expr // no nl
+     | for_expr
+     | ( "(" ~ newline* ~ expr_newline ~ newline* ~ ")" ))
+    ~ index_newline*
+}
+
+literal_value = { "true" | "false" | "null" | number }
+
+// Between the open and closing delimiters of these sequences,
+// newline sequences are ignored as whitespace.
+collection_value = { tuple | object }
+tuple = { 
+    "[" 
+    ~ newline*
+    ~ (
+        (!"for" ~ expr ~ (newline* ~ "," ~ newline* ~ expr)* ~ newline* ~ ","?)?
+    )
+    ~ newline*
+    ~ "]" 
+}
+
+object = {
+    "{"
+    ~ newline*
+    ~ (
+        // (objectelem ("," objectelem)* ","?)?
+        (!"for" ~ object_elem 
+        // either a , or newline(s) must appear before the next element, but the comma must be before any newlines
+         ~ ((","|newline) ~ newline* ~ object_elem)* ~ ","?)?
+    ) 
+    ~ newline*
+    ~ "}"
+}
+
+object_inner = ${
+    object_elem 
+    ~ (((WHITESPACE* ~ "," ~ WHITESPACE*) 
+       |((!newline ~ WHITESPACE)* ~ newline ~ WHITESPACE*))
+       ~ object_elem)*
+}
+object_elem = {
+    (ident | expr) 
+    ~ ("=" | ":") 
+    ~ expr
+}
+
+template_expr = { string_lit | heredoc }
+
+variable_expr = { ident_inner }
+
+// function call outside a newline-safe block
+function_call = {
+    ident
+    ~ "("
+    ~ arguments?
+    ~ ")"
+}
+
+// function call inside a newline-safe block
+function_call_newline = {
+    ident
+    ~ newline* ~ "("
+    ~ newline* ~ arguments?
+    ~ newline* ~ ")"
+}
+
+arguments = _{
+    // Within the parentheses that delimit the function arguments, 
+    // newline sequences are ignored as whitespace.
+    (expr_newline ~ newline*
+     ~ ("," ~ newline* ~ expr_newline)*
+     ~ newline* ~ ("," | ellipsis )?)
+}
+
+ellipsis = { "..." }
+
+for_expr = {
+    for_tuple_expr | for_object_expr
+}
+
+for_tuple_expr = { "[" ~ for_intro ~ expr ~ for_cond? ~ "]" }
+for_object_expr = { "{" ~ for_intro ~ expr ~ "=>" ~ for_value ~ for_cond? ~ "}" }
+for_intro = {"for" ~ ident ~ ("," ~ ident)? ~ "in" ~ expr ~ ":" }
+for_cond = { "if" ~ expr }
+for_value = ${
+    expr ~ ellipsis?
+}
+
+index = {
+    hcl_index | legacy_index
+}
+
+index_newline = {
+    newline* ~ (hcl_index | legacy_index_newline)
+}
+
+// Within the brackets that delimit the index key,
+// newline sequences are ignored as whitespace.
+hcl_index = {
+    "[" ~ newline* ~ expr ~ newline* ~ "]"
+}
+
+legacy_index = {
+    "." ~ ASCII_DIGIT+
+}
+
+legacy_index_newline = {
+    "." ~ newline* ~ ASCII_DIGIT+
+}
+
 
 // Strings
 string = @{ 
@@ -39,30 +177,63 @@ string = @{
 quoted_quote = _{ "\\\"" }
 quote = _{ "\""}
 
+string_lit = @{
+    quote
+    ~ ((string_escape ~ quoted_literal) | (!must_quote ~ ANY))* 
+    ~ quote
+}
+string_escape = { "\\" }
+quoted_literal = {
+      "r" 
+    | "n"
+    | "\""
+    | "\\"
+    | "t"
+    | ("u" ~ ASCII_HEX_DIGIT{4,4} ~ (ASCII_HEX_DIGIT{4,4})?)
+}
+must_quote = {
+    "\r" | "\n" | "\"" | "\\"
+}
+
 // Heredoc
+// TemplateExpr = quotedTemplate | heredocTemplate;
+// quotedTemplate = (as defined in prose above);
+// heredocTemplate = (
+//    ("<<" | "<<-") Identifier Newline
+//    (content as defined in prose above)
+//    Identifier Newline
+//);
+// Modified: Newline here results in a requirement for two newlines after a heredoc because Attribute also
+// requires newline.
 heredoc = ${
-    "<<" ~ "-"? ~ WHITESPACE* ~ PUSH(ident) ~ newline
-    ~ (!PEEK ~ ANY)*
+    heredoc_start
+    ~ heredoc_body
     ~ WHITESPACE* ~ POP
+}
+heredoc_start = _{
+    "<<" ~ "-"? ~ WHITESPACE* ~ PUSH(ident_inner) ~ newline
+}
+heredoc_body = {
+    (!PEEK ~ ANY)*
 }
 
 // Numbers
 number = @{
     "-"?
     ~ ("0" | ASCII_NONZERO_DIGIT ~ ASCII_DIGIT*)
-    ~ ("." ~ ASCII_DIGIT*)?
+    ~ (!ellipsis ~ "." ~ ASCII_DIGIT*)?
     ~ (^"e" ~ ("+" | "-")? ~ ASCII_DIGIT+)?
 }
 
 // Booleans
-boolean = { "true" | "false" }
 
 // Comments
-COMMENT = { inline_comment | block_comment }
-inline_comment = { ("#" | "//") ~ (!eo_comment ~ ANY)* ~ eo_comment}
-block_comment = { "/*" ~ (!"*/" ~ ANY)* ~ "*/" ~ eo_comment}
-eo_comment = { newline | EOI }
+COMMENT = _{ inline_comment | block_comment }
+inline_comment = _{ ("#" | "//") ~ (!eo_comment ~ ANY)* ~ eo_comment}
+block_comment = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" ~ eo_comment}
+eo_comment = _{ "\r\n" | "\n" | EOI }
 
 // Whitespace
-WHITESPACE = _{ " " | "\t" | newline }
-newline = _{ "\r\n" | "\n" }
+WHITESPACE = _{ " " | "\t"}
+// inline comments are equivalent to newlines
+newline = _{ "\r\n" | "\n" | inline_comment}
