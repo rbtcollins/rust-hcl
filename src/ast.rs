@@ -289,17 +289,9 @@ impl HclParser {
     }
 }
 
-/// The top level HCL AST
-#[derive(Debug)]
-pub enum HCL {
-    Nested,
-    Assignment,
-    Boolean(bool),
-}
-
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ConfigFile {
-    body: Vec<Structure>,
+    pub body: Vec<Structure>,
 }
 
 #[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
