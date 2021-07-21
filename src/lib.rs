@@ -15,6 +15,8 @@ use parse::HclParser;
 #[cfg(debug_assertions)]
 const _GRAMMAR: &'static str = include_str!("hcl.pest");
 
-pub fn parse(input: &str) -> Result<ast::ConfigFile, Box<dyn std::error::Error>> {
+pub fn parse(
+    input: &str,
+) -> Result<ast::ConfigFile, Box<dyn std::error::Error + Send + Sync + 'static>> {
     Ok(HclParser::config_file(parse_pest(input)?.single()?)?)
 }
