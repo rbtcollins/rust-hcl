@@ -18,7 +18,7 @@ pub fn parse(input: &str) -> Result<Nodes<Rule, ()>, Error> {
 #[cfg(test)]
 
 mod tests {
-    #![allow(non_fmt_panic)]
+    #![allow(non_fmt_panics)]
     use indoc::indoc;
     use pest::Parser;
 
